@@ -3,5 +3,6 @@
 
 # But not these files...
 !.gitignore
+!README.md
 !commands/
 !commands/**
