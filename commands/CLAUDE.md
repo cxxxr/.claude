@@ -6,13 +6,19 @@
 
 ```
 commands/
-├── CLAUDE.md          # このファイル
-├── git/               # Git関連コマンド
-│   ├── commit.md      # /git:commit
-│   ├── create-pr.md   # /git:create-pr
+├── CLAUDE.md            # このファイル
+├── analyze/             # コード分析・解説コマンド
+│   ├── architecture.md  # /analyze:architecture - ARCHITECTURE.md生成
+│   └── code.md          # /analyze:code - コード構造の解説
+├── claude/              # Claude Code関連コマンド
+│   └── create-command.md # /claude:create-command - コマンド作成
+├── git/                 # Git関連コマンド
+│   ├── commit.md        # /git:commit
+│   ├── create-pr.md     # /git:create-pr
 │   └── rename-branch.md # /git:rename-branch
-└── refactor/          # リファクタリング関連コマンド
-    └── dead-code.md   # /refactor:dead-code
+└── refactor/            # リファクタリング関連コマンド
+    ├── dead-code.md     # /refactor:dead-code - 未使用コード検出・削除
+    └── extract-common.md # /refactor:extract-common - 共通コード抽出
 ```
 
 ## コマンドファイルの書式
