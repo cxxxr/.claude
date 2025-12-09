@@ -30,6 +30,7 @@
 | `/git:rename-branch` | ブランチ名を変更 |
 | `/refactor:dead-code` | 未使用コードを検出・削除 |
 | `/refactor:extract-common` | 重複コードを共通コンポーネントとして抽出 |
+| `/common-lisp:organize-import` | defpackageの:use/:import-from/:exportを整理 |
 
 ### ディレクトリ構造
 
@@ -40,6 +41,8 @@ commands/
 │   └── code.md
 ├── claude/              # Claude Code関連
 │   └── create-command.md
+├── common-lisp/         # Common Lisp関連
+│   └── organize-import.md
 ├── git/                 # Git操作
 │   ├── commit.md
 │   ├── create-pr.md
