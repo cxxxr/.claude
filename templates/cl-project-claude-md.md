@@ -1,5 +1,22 @@
 # Common Lisp Project Guidelines
 
+## MCP Integration
+
+This project uses **cl-mcp** for REPL-driven development. Available tools:
+
+| Tool | Purpose |
+|------|---------|
+| `repl-eval` | Evaluate Lisp expressions |
+| `lisp-read-file` | Read Lisp files with folding |
+| `lisp-edit-form` | Structure-aware editing |
+| `code-find` | Find symbol definitions |
+| `code-describe` | Get symbol metadata |
+
+### Important Rules
+- Use `lisp-read-file` instead of `fs-read-file` for `.lisp` files
+- Use `lisp-edit-form` instead of `fs-write-file` for existing code
+- Always specify package context in `repl-eval`
+
 ## Required SubAgents
 
 Use the following SubAgents for their corresponding tasks in this project:
