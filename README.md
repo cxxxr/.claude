@@ -11,7 +11,8 @@ Common Lisp開発に特化したClaude Code拡張と、汎用的な開発支援�
 ├── settings.json       # Claude Code設定
 ├── commands/           # カスタムスラッシュコマンド
 ├── agents/             # 特化型エージェント
-└── skills/             # 知識ベース・ガイドライン
+├── skills/             # 知識ベース・ガイドライン
+└── references/         # 外部ドキュメント参照
 ```
 
 ---
@@ -38,6 +39,7 @@ Common Lisp開発に特化したClaude Code拡張と、汎用的な開発支援�
 |----------|------|
 | `/refactor:dead-code` | 8項目のフィルターで未使用コードを安全に検出・削除 |
 | `/refactor:extract-common` | 10項目の偶発的同型フィルターで重複コードを評価・抽出 |
+| `/refactor:prompt` | Markdownプロンプトをベストプラクティスに基づきリファクタリング |
 
 ### Nix
 
@@ -96,6 +98,16 @@ Common Lisp開発に特化したClaude Code拡張と、汎用的な開発支援�
 | `cl-asdf-system` | defsystem定義、ディレクトリ構成、テスト統合 |
 | `cl-clos-patterns` | CLOSのOOPパターン |
 | `cl-mallet-linter` | malletリンターの設定・ルール・自動修正 |
+
+---
+
+## References（外部ドキュメント）
+
+| ファイル | 内容 |
+|----------|------|
+| `google-common-lisp-style-guide.md` | Google Common Lisp Style Guide (Revision 1.28) |
+
+スキルやコマンドから `@references/ファイル名` で参照可能。
 
 ---
 
