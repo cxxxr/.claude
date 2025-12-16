@@ -2,11 +2,13 @@
 name: cl-macro-design
 description: マクロ設計のベストプラクティスを適用。マクロ作成・レビュー時に使用
 allowed-tools: Read, Grep, Glob, Bash
+references:
+  - @references/google-common-lisp-style-guide.md
 ---
 
 # Common Lisp Macro Design
 
-Based on Google Common Lisp Style Guide
+Based on Google Common Lisp Style Guide (@references/google-common-lisp-style-guide.md)
 
 ## 基本原則
 

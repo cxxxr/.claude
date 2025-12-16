@@ -2,9 +2,13 @@
 name: cl-coding-style
 description: Common Lispのコーディング規約を適用。Lispコード作成・レビュー時に使用
 allowed-tools: Read, Grep, Glob
+references:
+  - @references/google-common-lisp-style-guide.md
 ---
 
 # Common Lisp Coding Style
+
+Based on Google Common Lisp Style Guide (@references/google-common-lisp-style-guide.md)
 
 ## 命名規則
 

@@ -12,3 +12,5 @@
 !templates/**
 !agents/
 !agents/**
+!references/
+!references/**
