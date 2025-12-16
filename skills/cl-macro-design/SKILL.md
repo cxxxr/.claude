@@ -6,6 +6,8 @@ allowed-tools: Read, Grep, Glob, Bash
 
 # Common Lisp Macro Design
 
+Based on Google Common Lisp Style Guide
+
 ## 基本原則
 
 ### 1. マクロを使うべき場面
@@ -18,6 +20,18 @@ allowed-tools: Read, Grep, Glob, Bash
 - 単純なデータ変換
 - 実行時の値に依存する処理
 - 高階関数で表現可能な場合
+
+### 3. パフォーマンス目的ならINLINE宣言を使う
+```lisp
+;; BAD - パフォーマンスのためにマクロ化
+(defmacro fast-add (a b)
+  `(+ ,a ,b))
+
+;; GOOD - inline宣言で同等の効果
+(declaim (inline fast-add))
+(defun fast-add (a b)
+  (+ a b))
+```
 
 ## 衛生的マクロ (Hygienic Macros)
 
@@ -97,6 +111,28 @@ allowed-tools: Read, Grep, Glob, Bash
 
 ## 構造パターン
 
+### パターン0: CALL-WITH スタイル (Google推奨)
+
+マクロは構文処理のみを担当し、セマンティクスは補助関数に委譲する。
+
+```lisp
+;; マクロは薄いラッパー
+(defmacro with-foo (() &body body)
+  `(call-with-foo (lambda () ,@body)))
+
+;; セマンティクスは関数で実装
+(defun call-with-foo (thunk)
+  (setup-foo)
+  (unwind-protect
+      (funcall thunk)
+    (teardown-foo)))
+```
+
+**利点:**
+- デバッグ時にスタックトレースに関数名が現れる
+- 実行時に関数を更新可能（再コンパイル不要）
+- マクロの複雑さを軽減
+
 ### パターン1: with-xxx (リソース管理)
 ```lisp
 (defmacro with-open-database ((var connection-string) &body body)
@@ -166,6 +202,49 @@ allowed-tools: Read, Grep, Glob, Bash
 - [ ] 使用例を含める
 - [ ] 展開例を示す
 
+## パラメータ設計 (Google Style Guide)
+
+### パラメータ命名規約
+
+評価される形式には `-form` サフィックスを付ける:
+
+```lisp
+;; 明確: condition-form は評価される式
+(defmacro when-available (condition-form &body body)
+  `(when ,condition-form
+     ,@body))
+
+;; 例外: body, end は慣例的なので -form 不要
+```
+
+### 拡張可能なパラメータスペース
+
+将来の拡張に備えて空のパラメータリストを置く:
+
+```lisp
+;; BAD - 拡張が困難
+(defmacro with-lights-on (&body body)
+  ...)
+
+;; GOOD - 後からオプションを追加可能
+(defmacro with-lights-on (() &body body)
+  ...)
+
+;; 拡張例
+(defmacro with-lights-on ((&key color intensity) &body body)
+  ...)
+```
+
+### alexandria:once-only の活用
+
+引数の複数評価を防止:
+
+```lisp
+(defmacro double (value-form)
+  (alexandria:once-only (value-form)
+    `(+ ,value-form ,value-form)))
+```
+
 ## アンチパターン
 
 ### 1. 過度なマクロ使用
@@ -214,4 +293,43 @@ allowed-tools: Read, Grep, Glob, Bash
 (with-user user
   (log-user-action user)
   (do-something))
+```
+
+## 禁止事項 (Google Style Guide)
+
+### 1. 新しいリーダーマクロの無許可導入禁止
+
+```lisp
+;; 禁止: プロジェクト外に露出するリーダーマクロ
+(set-macro-character #\[ ...)  ; 危険
+
+;; 許可される場合のみ: named-readtables で制御
+(named-readtables:in-readtable :my-syntax)
+```
+
+### 2. 実行時のEVAL禁止
+
+```lisp
+;; 禁止: セキュリティ脆弱性
+(eval (read-from-string user-input))
+
+;; 許可: 開発ツール、ビルド基盤のみ
+```
+
+### 3. バッククォート内での複雑なロジック禁止
+
+```lisp
+;; BAD - バッククォート内でロジック
+(defmacro complex (&body body)
+  `(progn
+     ,@(if (some-condition body)
+           (transform-body body)
+           body)))
+
+;; GOOD - ロジックを外に出す
+(defmacro complex (&body body)
+  (let ((processed (if (some-condition body)
+                       (transform-body body)
+                       body)))
+    `(progn ,@processed)))
 ```

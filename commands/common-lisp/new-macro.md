@@ -10,18 +10,21 @@ $ARGUMENTS
 
 ## 手順
 
-### 1. 設計フェーズ
+### 1. 設計フェーズ (Google Style Guide準拠)
 Skill `cl-macro-design` を参照して:
-- マクロが本当に必要か確認（関数で十分でないか）
-- 適切なパラメータ設計
-- gensym の使用計画
+- マクロが本当に必要か確認（関数+inline で十分でないか）
+- CALL-WITH スタイルを検討（マクロは薄く、ロジックは補助関数へ）
+- 適切なパラメータ設計（`-form` サフィックス、拡張用の空パラメータリスト）
+- gensym / alexandria:once-only の使用計画
 
 ### 2. 実装フェーズ
 以下の点に注意して実装:
 - gensym で内部変数を保護
-- once-only または let で引数の複数評価を防止
-- &body は適切な位置に配置
+- alexandria:once-only で引数の複数評価を防止
+- &body は適切な位置に配置（拡張可能な `(() &body body)` 形式を推奨）
+- 評価される引数には `-form` サフィックスを付ける
 - docstring を含める
+- バッククォート内に複雑なロジックを書かない
 
 ### 3. 検証フェーズ
 **cl-macro-verifier** SubAgent を使用:
