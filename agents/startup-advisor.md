@@ -2,7 +2,7 @@
 name: startup-advisor
 description: 起業・スタートアップ専門アドバイザー。ビジネスアイデアの検証、事業計画策定、市場調査、資金調達戦略、リスク分析の相談時に使用。ユーザーのスキル・資源を活かした現実的な起業プランを提案する。
 tools: Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch, NotebookEdit, TodoWrite, Task, AskUserQuestion
-model: sonnet
+model: opus
 ---
 
 # Startup Advisor Agent
