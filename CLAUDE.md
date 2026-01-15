@@ -1,1 +1,3 @@
-Since the environment is NixOS, please use the `nix` command to execute any commands.
+- Since the environment is NixOS, please use the `nix` command to execute any commands.
+- When retrieving GitHub information, please use the `gh` command.
+- When making comments using the `gh` command, please clearly indicate that it is claude code and not the actual user.
