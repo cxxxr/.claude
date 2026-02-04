@@ -12,6 +12,7 @@ usage() {
     echo "  -a, --all           全セッションの合計を表示"
     echo "  -l, --list          最近のセッション一覧を表示"
     echo "  --since DATETIME    指定日時以降のトークンのみ集計"
+    echo "  --until DATETIME    指定日時以前のトークンのみ集計"
     echo "                      形式: 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM'"
     echo "  --since-login       最後のログイン以降のトークンのみ集計"
     echo "  -h, --help          このヘルプを表示"
@@ -23,6 +24,7 @@ usage() {
     echo "  $0 -a --since '2026-02-04'           # 2/4以降の全セッション"
     echo "  $0 -a --since '2026-02-04 10:00'     # 2/4 10:00以降"
     echo "  $0 -a --since-login                  # 最後のログイン以降"
+    echo "  $0 -a --since '2026-02-01' --until '2026-02-03'  # 期間指定"
 }
 
 # 最後のログイン時刻を取得（.credentials.jsonの更新時刻）
@@ -64,34 +66,31 @@ find_active_project_dir() {
 calc_tokens() {
     local file="$1"
     local since="${2:-}"
+    local until="${3:-}"
 
-    if [ -n "$since" ]; then
-        jq -s --arg since "$since" '
-          [.[] | select(.message.usage) | select(.timestamp >= $since)] |
-          {
-            input: (map(.message.usage.input_tokens // 0) | add),
-            output: (map(.message.usage.output_tokens // 0) | add),
-            cache_creation: (map(.message.usage.cache_creation_input_tokens // 0) | add),
-            cache_read: (map(.message.usage.cache_read_input_tokens // 0) | add),
-            messages: length,
-            first_timestamp: (map(.timestamp) | min),
-            last_timestamp: (map(.timestamp) | max)
-          }
-        ' "$file" 2>/dev/null
-    else
-        jq -s '
-          [.[] | select(.message.usage)] |
-          {
-            input: (map(.message.usage.input_tokens // 0) | add),
-            output: (map(.message.usage.output_tokens // 0) | add),
-            cache_creation: (map(.message.usage.cache_creation_input_tokens // 0) | add),
-            cache_read: (map(.message.usage.cache_read_input_tokens // 0) | add),
-            messages: length,
-            first_timestamp: (map(.timestamp) | min),
-            last_timestamp: (map(.timestamp) | max)
-          }
-        ' "$file" 2>/dev/null
-    fi
+    local jq_args=(-s)
+    local filter_parts=()
+
+    [ -n "$since" ] && jq_args+=(--arg since "$since") && filter_parts+=('select(.timestamp >= $since)')
+    [ -n "$until" ] && jq_args+=(--arg until "$until") && filter_parts+=('select(.timestamp <= $until)')
+
+    local filter="select(.message.usage)"
+    for part in "${filter_parts[@]}"; do
+        filter="$filter | $part"
+    done
+
+    jq "${jq_args[@]}" "
+      [.[] | $filter] |
+      {
+        input: (map(.message.usage.input_tokens // 0) | add),
+        output: (map(.message.usage.output_tokens // 0) | add),
+        cache_creation: (map(.message.usage.cache_creation_input_tokens // 0) | add),
+        cache_read: (map(.message.usage.cache_read_input_tokens // 0) | add),
+        messages: length,
+        first_timestamp: (map(.timestamp) | min),
+        last_timestamp: (map(.timestamp) | max)
+      }
+    " "$file" 2>/dev/null
 }
 
 # ローカル時間をUTC ISO8601形式に変換
@@ -116,6 +115,17 @@ to_iso8601() {
         return
     fi
     echo "$input"
+}
+
+# until用: 日付のみの場合はその日の終わり(23:59)をUTC ISO8601に変換
+to_iso8601_end() {
+    local input="$1"
+    if [[ "$input" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+        local tz=$(date +%Z)
+        date -u -d "$input 23:59 $tz" '+%Y-%m-%dT%H:%M:%S.000Z' 2>/dev/null || echo "$input"
+        return
+    fi
+    to_iso8601 "$input"
 }
 
 format_number() {
@@ -153,7 +163,8 @@ utc_to_local() {
 show_session() {
     local file="$1"
     local since="${2:-}"
-    local result=$(calc_tokens "$file" "$since")
+    local until="${3:-}"
+    local result=$(calc_tokens "$file" "$since" "$until")
 
     if [ -z "$result" ] || [ "$result" = "null" ]; then
         echo "トークン情報が見つかりません"
@@ -169,7 +180,13 @@ show_session() {
     local last_ts=$(echo "$result" | jq -r '.last_timestamp // "N/A"')
 
     echo "セッション: $(basename "$file" .jsonl)"
-    [ -n "$since" ] && echo "フィルタ: $(utc_to_local "$since") 以降"
+    if [ -n "$since" ] && [ -n "$until" ]; then
+        echo "フィルタ: $(utc_to_local "$since") ~ $(utc_to_local "$until")"
+    elif [ -n "$since" ]; then
+        echo "フィルタ: $(utc_to_local "$since") 以降"
+    elif [ -n "$until" ]; then
+        echo "フィルタ: $(utc_to_local "$until") 以前"
+    fi
     echo "─────────────────────────────────"
     printf "入力トークン:     %12s\n" "$(format_number "$input")"
     printf "出力トークン:     %12s\n" "$(format_number "$output")"
@@ -207,6 +224,7 @@ list_sessions() {
 all_sessions() {
     local project_dir="$1"
     local since="${2:-}"
+    local until="${3:-}"
     local total_input=0
     local total_output=0
     local total_cache_create=0
@@ -216,7 +234,7 @@ all_sessions() {
 
     for file in "$project_dir"/*.jsonl; do
         [ -f "$file" ] || continue
-        local result=$(calc_tokens "$file" "$since")
+        local result=$(calc_tokens "$file" "$since" "$until")
         [ -z "$result" ] || [ "$result" = "null" ] && continue
 
         local msg_count=$(echo "$result" | jq -r '.messages // 0')
@@ -231,7 +249,13 @@ all_sessions() {
     done
 
     echo "全セッション合計 ($session_count セッション)"
-    [ -n "$since" ] && echo "フィルタ: $(utc_to_local "$since") 以降"
+    if [ -n "$since" ] && [ -n "$until" ]; then
+        echo "フィルタ: $(utc_to_local "$since") ~ $(utc_to_local "$until")"
+    elif [ -n "$since" ]; then
+        echo "フィルタ: $(utc_to_local "$since") 以降"
+    elif [ -n "$until" ]; then
+        echo "フィルタ: $(utc_to_local "$until") 以前"
+    fi
     echo "─────────────────────────────────"
     printf "入力トークン:     %12s\n" "$(format_number "$total_input")"
     printf "出力トークン:     %12s\n" "$(format_number "$total_output")"
@@ -248,6 +272,7 @@ SESSION_ID=""
 SHOW_ALL=false
 SHOW_LIST=false
 SINCE=""
+UNTIL=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -256,6 +281,7 @@ while [[ $# -gt 0 ]]; do
         -a|--all) SHOW_ALL=true; shift ;;
         -l|--list) SHOW_LIST=true; shift ;;
         --since) SINCE=$(to_iso8601 "$2"); shift 2 ;;
+        --until) UNTIL=$(to_iso8601_end "$2"); shift 2 ;;
         --since-login) SINCE=$(get_login_time); shift ;;
         -h|--help) usage; exit 0 ;;
         *) echo "Unknown option: $1"; usage; exit 1 ;;
@@ -284,11 +310,11 @@ fi
 if $SHOW_LIST; then
     list_sessions "$PROJECT_DIR"
 elif $SHOW_ALL; then
-    all_sessions "$PROJECT_DIR" "$SINCE"
+    all_sessions "$PROJECT_DIR" "$SINCE" "$UNTIL"
 elif [ -n "$SESSION_ID" ]; then
     SESSION_FILE="$PROJECT_DIR/$SESSION_ID.jsonl"
     if [ -f "$SESSION_FILE" ]; then
-        show_session "$SESSION_FILE" "$SINCE"
+        show_session "$SESSION_FILE" "$SINCE" "$UNTIL"
     else
         echo "セッションファイルが見つかりません: $SESSION_FILE"
         exit 1
@@ -297,7 +323,7 @@ else
     # 最新のセッションを表示
     LATEST=$(ls -t "$PROJECT_DIR"/*.jsonl 2>/dev/null | head -1)
     if [ -n "$LATEST" ]; then
-        show_session "$LATEST" "$SINCE"
+        show_session "$LATEST" "$SINCE" "$UNTIL"
     else
         echo "セッションファイルが見つかりません"
         exit 1
